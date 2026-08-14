@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Motion Cricket - Startup Edition</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top:0; left:0; z-index: 1; }
+        #webcam { position: absolute; bottom: 20px; right: 20px; width: 180px; height: 135px; border-radius: 10px; border: 2px solid #00ffcc; z-index: 10; transform: scaleX(-1); }
+        #ui-overlay { position: absolute; top: 20px; left: 20px; z-index: 10; color: white; pointer-events: none; }
+        .score-card { background: rgba(0, 0, 0, 0.7); padding: 12px 20px; border-radius: 8px; border-left: 4px solid #00ffcc; font-size: 18px; }
+        #status-msg { font-size: 28px; font-weight: bold; margin-top: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); color: #ffe600; }
+        #flash-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: black; opacity: 0; z-index: 99; pointer-events: none; transition: opacity 0.05s ease; }
+    </style>
+    <!-- Three.js & MediaPipe Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div id="flash-screen"></div>
+    <div id="canvas-container"></div>
+    <video id="webcam" autoplay playsinline></video>
+    
+    <div id="ui-overlay">
+        <div class="score-card">
+            <div>SCORE: <span id="runs">0</span> / <span id="wickets">0</span></div>
+            <div>BALLS: <span id="balls">0</span></div>
+        </div>
+        <div id="status-msg">Align in Crease to Begin</div>
+    </div>
+
+    <script>
+        // --- 1. 3D SCENE SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Sky blue
+        scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        sunLight.position.set(20, 40, -20);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        scene.add(sunLight);
+
+        // Field & Pitch Graphics
+        const fieldGeo = new THREE.CylinderGeometry(80, 80, 0.2, 64);
+        const fieldMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.8 });
+        const field = new THREE.Mesh(fieldGeo, fieldMat);
+        field.position.y = -0.1;
+        field.receiveShadow = true;
+        scene.add(field);
+
+        const pitchGeo = new THREE.BoxGeometry(3.05, 0.22, 20.12);
+        const pitchMat = new THREE.MeshStandardMaterial({ color: 0xc2b280, roughness: 0.9 });
+        const pitch = new THREE.Mesh(pitchGeo, pitchMat);
+        pitch.position.set(0, 0, 0);
+        pitch.receiveShadow = true;
+        scene.add(pitch);
+
+        // Crease Lines
+        const creaseMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const popCreaseGeo = new THREE.BoxGeometry(2.4, 0.23, 0.1);
+        
+        const battingCrease = new THREE.Mesh(popCreaseGeo, creaseMat);
+        battingCrease.position.set(0, 0, -8.8);
+        scene.add(battingCrease);
+
+        const bowlingCrease = new THREE.Mesh(popCreaseGeo, creaseMat);
+        bowlingCrease.position.set(0, 0, 8.8);
+        scene.add(bowlingCrease);
+
+        // Wickets Construction
+        function createWickets(zPos) {
+            const group = new THREE.Group();
+            const stumpMat = new THREE.MeshStandardMaterial({ color: 0xdddddd });
+            for (let i = -1; i <= 1; i++) {
+                const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.71), stumpMat);
+                stump.position.set(i * 0.12, 0.35, zPos);
+                stump.castShadow = true;
+                group.add(stump);
+            }
+            const bailMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+            const bail = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.03, 0.03), bailMat);
+            bail.position.set(0, 0.72, zPos);
+            group.add(bail);
+            return group;
+        }
+        scene.add(createWickets(-9.8));
+        scene.add(createWickets(9.8));
+
+        // 3D Bat Model
+        const batGroup = new THREE.Group();
+        const batHandle = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.03, 0.03, 0.3),
+            new THREE.MeshStandardMaterial({ color: 0x222222 })
+        );
+        batHandle.position.y = 0.8;
+        batGroup.add(batHandle);
+
+        const batBlade = new THREE.Mesh(
+            new THREE.BoxGeometry(0.12, 0.8, 0.04),
+            new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.4 })
+        );
+        batBlade.position.y = 0.3;
+        batBlade.castShadow = true;
+        batGroup.add(batBlade);
+        
+        batGroup.position.set(0, 0.5, -8.5);
+        scene.add(batGroup);
+
+        // 3D Ball Model
+        const ballGeo = new THREE.SphereGeometry(0.07, 32, 32);
+        const ballMat = new THREE.MeshStandardMaterial({ color: 0xcc0000, roughness: 0.3 });
+        const ball = new THREE.Mesh(ballGeo, ballMat);
+        ball.castShadow = true;
+        scene.add(ball);
+
+        // --- 2. GAME STATE & TRAJECTORY MATH ---
+        let runs = 0, wickets = 0, totalBalls = 0;
+        let ballState = 'WAITING'; // WAITING, BOWLED, HIT, DEAD
+        let ballVel = new THREE.Vector3();
+        let gravity = -9.8; // Standard gravitational acceleration
+        let cameraMode = 'BATSMAN';
+
+        function resetBall() {
+            ball.position.set(0, 1.8, 9.5);
+            ballVel.set(0, 0, 0);
+            ballState = 'WAITING';
+            cameraMode = 'BATSMAN';
+            document.getElementById('status-msg').innerText = "Get Ready for Next Delivery!";
+        }
+        resetBall();
+
+        function bowlBall() {
+            if (ballState !== 'WAITING') return;
+            ballState = 'BOWLED';
+            totalBalls++;
+            document.getElementById('balls').innerText = totalBalls;
+            document.getElementById('status-msg').innerText = "BALL BOWLED!";
+            
+            const speed = 18 + Math.random() * 4; 
+            const targetX = (Math.random() - 0.5) * 0.8;
+            ballVel.set(targetX * 0.2, -2.5, -speed);
+        }
+
+        setInterval(() => {
+            if (ballState === 'WAITING') bowlBall();
+        }, 5000);
+
+        // --- 3. CAMERA TRANSITIONS ---
+        function updateCamera() {
+            if (cameraMode === 'BATSMAN') {
+                camera.position.lerp(new THREE.Vector3(0, 1.6, -11.5), 0.1);
+                camera.lookAt(0, 1.0, 5.0);
+            } else if (cameraMode === 'BROADCAST') {
+                const camTargetPos = new THREE.Vector3(ball.position.x * 0.3, 12, ball.position.z - 12);
+                camera.position.lerp(camTargetPos, 0.05);
+                camera.lookAt(ball.position);
+            }
+        }
+
+        // --- 4. WEBCAM MOTION CAPTURE (MEDIAPIPE) ---
+        const videoElement = document.getElementById('webcam');
+        const statusMsg = document.getElementById('status-msg');
+
+        const pose = new Pose({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+        });
+
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.6
+        });
+
+        pose.onResults((results) => {
+            if (!results.poseLandmarks) return;
+
+            const landmarks = results.poseLandmarks;
+            const rightWrist = landmarks[16];
+            const leftWrist = landmarks[15];
+
+            const handX = (rightWrist.x + leftWrist.x) / 2;
+            const handY = (rightWrist.y + leftWrist.y) / 2;
+
+            // Map hand positions to crease dimensions
+            const targetX = -(handX - 0.5) * 4.5;
+            const targetY = Math.max(0.2, (1.0 - handY) * 3.0);
+
+            batGroup.position.x = THREE.MathUtils.lerp(batGroup.position.x, targetX, 0.3);
+            batGroup.position.y = THREE.MathUtils.lerp(batGroup.position.y, targetY, 0.3);
+
+            const angle = Math.atan2(leftWrist.y - rightWrist.y, leftWrist.x - rightWrist.x);
+            batGroup.rotation.z = angle;
+        });
+
+        const cameraUtils = new Camera(videoElement, {
+            onFrame: async () => { await pose.send({ image: videoElement }); },
+            width: 320,
+            height: 240
+        });
+        cameraUtils.start();
+
+        // --- 5. MAIN PHYSICS & ANIMATION LOOP ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (ballState === 'BOWLED') {
+                ball.position.addScaledVector(ballVel, delta);
+                ballVel.y += gravity * delta;
+
+                // Bounce on pitch
+                if (ball.position.y <= 0.07 && ball.position.z > -8) {
+                    ball.position.y = 0.07;
+                    ballVel.y = Math.abs(ballVel.y) * 0.75; 
+                }
+
+                // Hit Detection
+                const dist = batGroup.position.distanceTo(ball.position);
+                if (dist < 0.65) {
+                    ballState = 'HIT';
+                    
+                    // Microsecond Black Screen Flash
+                    const flash = document.getElementById('flash-screen');
+                    flash.style.opacity = '1';
+                    setTimeout(() => { flash.style.opacity = '0'; }, 60);
+
+                    const isLofted = batGroup.position.y > 0.8;
+                    const hitPower = 22 + Math.random() * 10;
+                    const hitAngleX = (ball.position.x - batGroup.position.x) * 15;
+
+                    // Calculate $y = x \tan(\theta) - \frac{g x^2}{2 v^2 \cos^2(\theta)}$ trajectory force
+                    ballVel.set(hitAngleX, isLofted ? 12 : 3, hitPower);
+                    cameraMode = 'BROADCAST';
+
+                    setTimeout(() => {
+                        let scored = 0;
+                        if (isLofted && hitPower > 28) {
+                            scored = 6;
+                            statusMsg.innerText = "SIXER! OUT OF THE PARK!";
+                        } else if (hitPower > 24) {
+                            scored = 4;
+                            statusMsg.innerText = "FOUR RUNS!";
+                        } else {
+                            scored = Math.floor(Math.random() * 3) + 1;
+                            statusMsg.innerText = scored + " RUNS!";
+                        }
+                        runs += scored;
+                        document.getElementById('runs').innerText = runs;
+
+                        setTimeout(resetBall, 2500);
+                    }, 1000);
+                }
+
+                // Wickets / Missed shot detection
+                if (ball.position.z < -9.8) {
+                    if (Math.abs(ball.position.x) < 0.25 && ball.position.y < 0.8) {
+                        statusMsg.innerText = "BOWLED OUT!";
+                        wickets++;
+                        document.getElementById('wickets').innerText = wickets;
+                    } else {
+                        statusMsg.innerText = "DOT BALL";
+                    }
+                    ballState = 'DEAD';
+                    setTimeout(resetBall, 2000);
+                }
+            } else if (ballState === 'HIT') {
+                ball.position.addScaledVector(ballVel, delta);
+                ballVel.y += gravity * delta;
+
+                if (ball.position.y <= 0.07) {
+                    ball.position.y = 0.07;
+                    ballVel.y = Math.abs(ballVel.y) * 0.5;
+                    ballVel.x *= 0.8;
+                    ballVel.z *= 0.8;
+                }
+            }
+
+            updateCamera();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
