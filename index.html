@@ -1,4 +1,11 @@
-<!DOCTYPE html>
+[6:22 pm, 13/7/2026] Jatin Verma: olution, and MIS reporting. I built a payout failure tracking framework and automated multiple operational processes using…
+[1:17 pm, 29/7/2026] Jatin Verma: 1. Tell Me About Yourself
+Best Answer (2 Minutes)
+"Hi, I am Jatin Verma, currently working as senior Lead at Pine Labs. I have over 4.5 years of experience across fintech and digital payments, including Pine Labs, GoKwik, and Paytm.
+Throughout my career, I have worked extensively on MIS reporting, revenue analysis, financial controls, reconciliation, and business performance tracking. Currently, at Pine Labs, I manage daily, weekly, and monthly dashboards covering GMV, revenue, costs, margins, and payout performance. I also perform product-level profitability analysis and automate financial reporting using SQL and Python.
+Before Pine Labs, I worked as a Financial Analyst at GoKwik, where I handled Actual vs Provisional revenue analysis, created merchant-level …
+[9:33 am, 8/8/2026] Jatin Verma: Retail weekend
+[12:24 pm, 21/8/2026] Jatin Verma: <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -19,7 +26,12 @@
   #hud h1{font-size:15px;margin:0 0 6px 0;letter-spacing:1px;color:#3adfff;}
   #scoreline{font-size:26px;font-weight:700;letter-spacing:1px;}
   #scoreline span.overs{font-size:14px;color:#9fb5d1;font-weight:400;margin-left:6px;}
-  #status{font-size:13px;color:#ffd166;min-height:18px;margin-top:4px;}
+  #overHistory{display:flex;gap:4px;margin:6px 0 4px;flex-wrap:wrap;}
+  .ballPip{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.3);font-size:10px;display:flex;align-items:center;justify-content:center;color:#eaf1ff;}
+  .ballPip.boundary{background:#ffd166;color:#03121c;border-color:#ffd166;font-weight:700;}
+  .ballPip.wicket{background:#e74c3c;color:#fff;border-color:#e74c3c;font-weight:700;}
+  #status{font-size:13px;color:#ffd166;min-height:18px;margin-top:2px;}
   #ballType{font-size:12px;color:#9fdcff;margin-top:2px;}
   #topbar{position:fixed;top:12px;right:12px;z-index:10;display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
   .btn{background:linear-gradient(180deg,#1c3a5e,#0f2138);border:1px solid #3adfff;color:#eaf1ff;
@@ -40,6 +52,26 @@
     background:rgba(6,10,18,.75);border:1px solid rgba(255,209,102,.4);border-radius:20px;
     padding:8px 22px;font-size:14px;color:#ffd166;min-width:200px;text-align:center;opacity:0;transition:opacity .3s;}
   #commentary.show{opacity:1;}
+
+  /* Bowler delivery-setup panel */
+  #bowlPanel{position:fixed;inset:0;z-index:40;background:rgba(2,6,12,.72);
+    display:flex;align-items:center;justify-content:center;}
+  .bowlPanelInner{background:rgba(10,18,30,.96);border:1px solid rgba(120,190,255,.4);
+    border-radius:16px;padding:20px 22px;width:min(360px,88vw);}
+  .bowlPanelInner h2{margin:0 0 14px;font-size:16px;color:#3adfff;text-align:center;}
+  .bpRow{margin-bottom:15px;}
+  .bpRow label{display:block;font-size:12px;color:#9fb5d1;margin-bottom:6px;}
+  .segBtns{display:flex;gap:6px;}
+  .segBtns button{flex:1;padding:8px 0;background:#0f2138;border:1px solid rgba(120,190,255,.35);
+    color:#eaf1ff;border-radius:7px;font-size:12px;cursor:pointer;}
+  .segBtns button.active{background:#3adfff;color:#03121c;border-color:#3adfff;}
+  .bpRow input[type=range]{width:100%;accent-color:#3adfff;}
+  .lengthMeterWrap{position:relative;height:28px;border-radius:6px;overflow:hidden;
+    background:linear-gradient(90deg,#e74c3c,#f1c40f,#2ecc71,#5ce1e6,#2ecc71,#f1c40f,#e74c3c);}
+  .lengthZoneLabels{display:flex;justify-content:space-between;font-size:9px;color:#9fb5d1;margin-top:3px;}
+  .lengthMarker{position:absolute;top:0;bottom:0;width:4px;background:#fff;box-shadow:0 0 8px #fff;left:50%;}
+  .bowlGo{width:100%;margin-top:4px;padding:13px 0;font-size:15px;background:#3adfff;color:#03121c;
+    border:none;border-radius:9px;font-weight:700;cursor:pointer;letter-spacing:.5px;}
 </style>
 </head>
 <body>
@@ -51,6 +83,7 @@
 <div id="hud">
   <h1>🏏 MOTION CRICKET 3D</h1>
   <div id="scoreline">0/0 <span class="overs">(0.0 ov)</span></div>
+  <div id="overHistory"></div>
   <div id="ballType">Ball type: --</div>
   <div id="status">Calibrating pose tracker...</div>
 </div>
@@ -58,28 +91,56 @@
 <div id="topbar">
   <div id="camRow">
     <button class="btn active" id="camRear">Rear View</button>
+    <button class="btn" id="camClose">Close Cam</button>
     <button class="btn" id="camSide">Side View</button>
   </div>
   <button class="btn" id="restartBtn">Restart Innings</button>
 </div>
 
-<div id="calBar">Swing your <b>real arms</b> left/right &amp; up/down — physical LEFT moves &amp; angles the bat screen-left. The bat blade glows green when a ball is in your hitting window.</div>
+<div id="calBar">Swing your <b>real arms</b> left/right &amp; up/down — physical LEFT moves &amp; angles the bat screen-left. Bat glows green when a ball is in your hitting window.</div>
 
 <div id="commentary"></div>
+
+<div id="bowlPanel" class="hidden">
+  <div class="bowlPanelInner">
+    <h2>Set Your Delivery</h2>
+    <div class="bpRow">
+      <label>Pace</label>
+      <div class="segBtns" id="paceBtns">
+        <button data-v="fast" class="active">Fast</button>
+        <button data-v="medium">Medium</button>
+        <button data-v="spin">Spin</button>
+      </div>
+    </div>
+    <div class="bpRow">
+      <label>Line: <span id="lineLabel">Middle Stump</span></label>
+      <input type="range" id="lineSlider" min="-160" max="180" value="0">
+    </div>
+    <div class="bpRow">
+      <label>Swing: <span id="swingLabel">Straight</span></label>
+      <input type="range" id="swingSlider" min="-100" max="100" value="0">
+    </div>
+    <div class="bpRow">
+      <label>Length — tap BOWL to stop the marker</label>
+      <div class="lengthMeterWrap"><div class="lengthMarker" id="lengthMarker"></div></div>
+      <div class="lengthZoneLabels"><span>Yorker</span><span>Full</span><span>Good</span><span>Short</span><span>Bouncer</span></div>
+    </div>
+    <button class="bowlGo" id="bowlGoBtn">BOWL ▶️</button>
+  </div>
+</div>
 
 <div id="startOverlay">
   <h1>MOTION CRICKET 3D</h1>
   <p>A full 3D cricket simulator controlled by your body. Enable your webcam — swing your forearms like a real bat.
   Moving your arms to your physical left sends the bat left on screen, exactly like batting in a mirror.
-  Time your swing against 6 real bowling deliveries with seam &amp; swing physics.</p>
-  <button class="btn" id="bigStart">▶ Start Match (Enable Camera)</button>
+  Set each delivery yourself — pace, swing and length — then time your swing against it.</p>
+  <button class="btn" id="bigStart">▶️ Start Match (Enable Camera)</button>
   <div id="permMsg"></div>
 </div>
 
 <!-- Three.js r128 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<!-- MediaPipe Pose (camera_utils intentionally omitted — see note in code: we drive frames
-     manually to avoid requesting a second, redundant camera stream and to cut inference latency) -->
+<!-- MediaPipe Pose (camera_utils intentionally omitted — frames are pumped manually, see note in code) -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 
 <script>
@@ -93,7 +154,7 @@
 -------------------------------------------------------------------------- */
 const STATE = {
   running:false,
-  camMode:'rear',           // 'rear' | 'side' | 'replay'
+  camMode:'rear',           // 'rear' | 'close' | 'side' | 'replay'
   runs:0, wickets:0, ballsBowled:0,
   deliveryInFlight:false,
   deliveryType:null,
@@ -102,7 +163,9 @@ const STATE = {
   ballHitThisDelivery:false,
   outThisDelivery:false,
   whooshPlayed:false,
-  lastCommentary:'',
+  awaitingBowlSelect:false,
+  lastBallLabel:null,
+  overHistory:[],
   replay:{active:false, t:0, path:[]},
 };
 
@@ -118,7 +181,6 @@ class AudioEngine{
   constructor(){ this.ctx=null; }
   init(){ if(!this.ctx){ this.ctx = new (window.AudioContext||window.webkitAudioContext)(); } }
 
-  // Short high-gain triangle wave "pop" for bat/ball contact
   batImpact(power=1){
     if(!this.ctx) return;
     const t = this.ctx.currentTime;
@@ -134,13 +196,11 @@ class AudioEngine{
     osc.start(t); osc.stop(t+0.16);
   }
 
-  // Quick filtered noise sweep for a swing-and-miss "whoosh"
   whoosh(){
     if(!this.ctx) return;
     this._noiseBurst(0.18, 700, 3200, 0.22);
   }
 
-  // Square wave wooden timber crash for stumps being hit
   stumpsHit(){
     if(!this.ctx) return;
     const t = this.ctx.currentTime;
@@ -160,7 +220,6 @@ class AudioEngine{
     this._noiseBurst(0.25, 800, 2200, 0.5);
   }
 
-  // Bandpass-filtered white-noise burst ramping up, for crowd cheer on boundaries
   crowdCheer(big=false){
     if(!this.ctx) return;
     const dur = big? 2.2 : 1.3;
@@ -230,8 +289,11 @@ scene.background = new THREE.Color(0x8fd0ff);
 scene.fog = new THREE.Fog(0x8fd0ff, 60, 140);
 
 const camera = new THREE.PerspectiveCamera(58, window.innerWidth/window.innerHeight, 0.1, 500);
+// Rear High View — mandated unobstructed sightline camera, left exactly as specified.
 const CAM_REAR = new THREE.Vector3(0, 3.4, -13.5);
 const CAM_SIDE = new THREE.Vector3(11, 3.8, -3.5);
+// Close Cam — tighter, lower, over-the-bowler's-shoulder broadcast angle (additional option).
+const CAM_CLOSE = new THREE.Vector3(0, 1.9, -8.5);
 camera.position.copy(CAM_REAR);
 camera.lookAt(0,1.2,10);
 
@@ -324,19 +386,46 @@ function sightScreen(z){
 sightScreen(-24);
 
 /* --------------------------------------------------------------------------
-   4. PROCEDURAL HUMANOID BUILDER
+   4. PROCEDURAL HUMANOID BUILDER  (rounded joints, jersey numbers, better helmet)
 -------------------------------------------------------------------------- */
 function limb(radiusTop,radiusBottom,length,color){
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(radiusTop,radiusBottom,length,10),
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(radiusTop,radiusBottom,length,12),
     new THREE.MeshStandardMaterial({color}));
   m.castShadow=true;
   return m;
 }
 
+function jointCap(parent, x,y,z, radius, color){
+  const m = new THREE.Mesh(new THREE.SphereGeometry(radius,10,10),
+    new THREE.MeshStandardMaterial({color}));
+  m.position.set(x,y,z);
+  m.castShadow=true;
+  parent.add(m);
+  return m;
+}
+
+function makeJerseyTexture(number, mainColorHex, accentColorHex){
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = mainColorHex; ctx.fillRect(0,0,128,128);
+  ctx.strokeStyle = accentColorHex; ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.moveTo(0,18); ctx.lineTo(128,18); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,110); ctx.lineTo(128,110); ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 60px Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(number), 64, 66);
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+function toCssHex(n){ return '#'+n.toString(16).padStart(6,'0'); }
+
 function buildHumanoid(opts){
   const {
     jersey=0x1e63c8, trouser=0xf2f2f2, skin=0xd8a878, helmet=null,
-    pads=false, gloves=false, name='fielder'
+    pads=false, gloves=false, name='fielder', jerseyNumber=null
   } = opts;
   const g = new THREE.Group();
   g.name = name;
@@ -344,6 +433,8 @@ function buildHumanoid(opts){
   const legL = limb(0.11,0.09,0.9,trouser); legL.position.set(-0.14,0.45,0);
   const legR = limb(0.11,0.09,0.9,trouser); legR.position.set(0.14,0.45,0);
   g.add(legL,legR);
+  jointCap(g,-0.14,0.06,0.02,0.1,0x222222); // L shoe
+  jointCap(g, 0.14,0.06,0.02,0.1,0x222222); // R shoe
 
   if(pads){
     const padMat = new THREE.MeshStandardMaterial({color:0xffffff});
@@ -353,15 +444,28 @@ function buildHumanoid(opts){
     g.add(padL,padR);
   }
 
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.62,0.28),
-    new THREE.MeshStandardMaterial({color:jersey}));
+  // Torso: rounded cylinder cross-section (flattened) instead of a sharp box, reads far
+  // less "blocky" than a plain BoxGeometry silhouette.
+  let jerseyMat;
+  if(jerseyNumber){
+    const tex = makeJerseyTexture(jerseyNumber, toCssHex(jersey), '#ffffff');
+    jerseyMat = new THREE.MeshStandardMaterial({map:tex, roughness:0.75});
+  } else {
+    jerseyMat = new THREE.MeshStandardMaterial({color:jersey, roughness:0.75});
+  }
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.29,0.25,0.62,10), jerseyMat);
+  torso.scale.set(1,1,0.62);
   torso.position.y = 1.21; torso.castShadow=true;
   g.add(torso);
 
-  const hips = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.24,0.26),
+  const hips = new THREE.Mesh(new THREE.CylinderGeometry(0.24,0.22,0.26,10),
     new THREE.MeshStandardMaterial({color:trouser}));
+  hips.scale.set(1,1,0.85);
   hips.position.y=0.92; hips.castShadow=true;
   g.add(hips);
+  jointCap(g,-0.14,0.9,0,0.1,trouser);
+  jointCap(g, 0.14,0.9,0,0.1,trouser);
+  jointCap(g,0,1.56,0,0.1,skin); // neck
 
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.155,14,14),
     new THREE.MeshStandardMaterial({color:skin}));
@@ -369,22 +473,32 @@ function buildHumanoid(opts){
   g.add(head);
 
   if(helmet){
-    const hel = new THREE.Mesh(new THREE.SphereGeometry(0.185,14,14,0,Math.PI*2,0,Math.PI*0.62),
-      new THREE.MeshStandardMaterial({color:helmet}));
+    const helMat = new THREE.MeshStandardMaterial({color:helmet, roughness:0.4});
+    const hel = new THREE.Mesh(new THREE.SphereGeometry(0.185,14,14,0,Math.PI*2,0,Math.PI*0.62), helMat);
     hel.position.y=1.72; hel.castShadow=true;
     g.add(hel);
-    const grille = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.18,0.02),
-      new THREE.MeshStandardMaterial({color:0x333333, wireframe:true}));
-    grille.position.set(0,1.63,0.16);
-    g.add(grille);
+    const peak = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.02,0.09), helMat);
+    peak.position.set(0,1.64,0.17);
+    peak.rotation.x = -0.25;
+    g.add(peak);
+    const grilleMat = new THREE.MeshStandardMaterial({color:0x2a2a2a, metalness:0.6, roughness:0.4});
+    for(let i=0;i<4;i++){
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,0.19,6), grilleMat);
+      bar.rotation.z = Math.PI/2;
+      bar.position.set(0, 1.615 - i*0.045, 0.155);
+      g.add(bar);
+    }
   }
 
-  // Arms built as shoulder -> elbow pivot chains so they can be driven by inverse kinematics.
+  // Arms built as shoulder -> elbow pivot chains, driven by scripted rotation for
+  // fielders/bowler. (The batsman gets a separate, dedicated arm system — see section 5.)
   const shoulderL = new THREE.Group(); shoulderL.position.set(-0.32,1.46,0);
   const shoulderR = new THREE.Group(); shoulderR.position.set(0.32,1.46,0);
   const armMat = jersey;
   const upperL = limb(0.075,0.065,0.42,armMat); upperL.position.y=-0.21; shoulderL.add(upperL);
   const upperR = limb(0.075,0.065,0.42,armMat); upperR.position.y=-0.21; shoulderR.add(upperR);
+  jointCap(shoulderL,0,0,0,0.09,jersey);
+  jointCap(shoulderR,0,0,0,0.09,jersey);
 
   const elbowL = new THREE.Group(); elbowL.position.set(0,-0.42,0); shoulderL.add(elbowL);
   const elbowR = new THREE.Group(); elbowR.position.set(0,-0.42,0); shoulderR.add(elbowR);
@@ -415,19 +529,15 @@ function buildHumanoid(opts){
 /* --------------------------------------------------------------------------
    5. BATSMAN + BAT RIG  (motion-tracked)
 -------------------------------------------------------------------------- */
-const batsman = buildHumanoid({jersey:0x143e8f, trouser:0xf5f5f5, helmet:0x143e8f, pads:true, gloves:true, name:'batsman'});
+const batsman = buildHumanoid({jersey:0x143e8f, trouser:0xf5f5f5, helmet:0x143e8f, pads:true, gloves:true, name:'batsman', jerseyNumber:18});
 batsman.position.set(0, 0, PITCH_Z_BATSMAN - 0.35);
 batsman.rotation.y = Math.PI; // face the bowler
 fieldGroup.add(batsman);
 
 // --- CRITICAL FIX -----------------------------------------------------------------------
 // The bat pivot lives directly in world space (a child of fieldGroup, which has no rotation
-// or offset of its own) INSTEAD of being nested inside the batsman's rotated body group.
-// Previously it was parented under the batsman (who is rotated 180° to face the bowler),
-// which silently re-transformed every position/rotation we fed it — pushing the bat's grip
-// point behind the body instead of out in front, and putting an extra hidden rotation on
-// top of the "rotation.z = -angle" inversion fix. Keeping it in world space means the
-// spatial-inversion formulas map 1:1 onto what you see on screen, with nothing hidden.
+// or offset of its own) INSTEAD of being nested inside the batsman's rotated body group, so
+// the spatial-inversion formulas map 1:1 onto what you see on screen, with nothing hidden.
 const BASE_Y = 1.05;
 const BAT_BASE = new THREE.Vector3(0, BASE_Y, PITCH_Z_BATSMAN - 1.05); // out in front, toward the bowler
 
@@ -438,7 +548,7 @@ fieldGroup.add(batPivot);
 const batGroup = new THREE.Group();
 batPivot.add(batGroup);
 
-let bladeMat; // exposed so the render loop can pulse it as a "hit window" cue
+let bladeMat;
 (function buildBat(){
   const handleMat = new THREE.MeshStandardMaterial({color:0x3a2a18});
   bladeMat = new THREE.MeshStandardMaterial({color:0xead9a8, emissive:0x000000, emissiveIntensity:0});
@@ -453,12 +563,11 @@ let bladeMat; // exposed so the render loop can pulse it as a "hit window" cue
   batGroup.add(handle, blade, edge);
 })();
 
-// Two-handed grip targets along the handle (top hand near the top, bottom hand just below)
-// used to aim the batsman's arms so the bat reads as a rigid extension of his hands.
+// Two-handed grip targets along the handle, used both for collision sampling and to aim
+// the batsman's arms so the bat reads as a rigid extension of his hands.
 const GRIP_TOP_LOCAL = new THREE.Vector3(0,-0.03,0.02);
 const GRIP_BOTTOM_LOCAL = new THREE.Vector3(0,-0.17,0.02);
 
-// Sample points running the length of handle -> blade toe, used for forgiving swept collision.
 const BAT_SAMPLE_POINTS = [
   new THREE.Vector3(0,-0.02,0.02),
   new THREE.Vector3(0,-0.34,0.02),
@@ -467,10 +576,46 @@ const BAT_SAMPLE_POINTS = [
   new THREE.Vector3(0,-0.95,0.02),
 ];
 
+// --- DETERMINISTIC "STRETCHY LIMB" ARM SYSTEM ---------------------------------------------
+// The batsman's stock rotational arms are hidden; instead his arms are drawn fresh every
+// frame as segments stretched directly between two world-space points (shoulder -> bat
+// grip). This has no rotational IK solve, so — unlike the previous per-shoulder quaternion
+// "aim" approach — there is no ambiguous elbow-bend plane that can flip to a wrong-looking
+// pose. It is geometrically impossible for this to swing to "the other side."
+batsman.userData.shoulderL.visible = false;
+batsman.userData.shoulderR.visible = false;
+
+const shoulderAnchorL = new THREE.Object3D();
+shoulderAnchorL.position.set(-0.32, 0.25, 0); // relative to torso
+batsman.userData.torso.add(shoulderAnchorL);
+const shoulderAnchorR = new THREE.Object3D();
+shoulderAnchorR.position.set(0.32, 0.25, 0);
+batsman.userData.torso.add(shoulderAnchorR);
+
+const battingLimbMat = new THREE.MeshStandardMaterial({color:0x143e8f});
+const battingSkinMat = new THREE.MeshStandardMaterial({color:0xd8a878});
+const battingGloveMat = new THREE.MeshStandardMaterial({color:0xd23c3c});
+
+function makeStretchSegment(radius, material){
+  const geo = new THREE.CylinderGeometry(radius, radius*0.92, 1, 10); // unit length; scaled per-frame
+  const m = new THREE.Mesh(geo, material);
+  m.castShadow = true;
+  fieldGroup.add(m);
+  return m;
+}
+const upperArmL = makeStretchSegment(0.078, battingLimbMat);
+const upperArmR = makeStretchSegment(0.078, battingLimbMat);
+const foreArmL = makeStretchSegment(0.066, battingSkinMat);
+const foreArmR = makeStretchSegment(0.066, battingSkinMat);
+const gloveL = new THREE.Mesh(new THREE.SphereGeometry(0.09,10,10), battingGloveMat);
+const gloveR = new THREE.Mesh(new THREE.SphereGeometry(0.09,10,10), battingGloveMat);
+gloveL.castShadow = true; gloveR.castShadow = true;
+fieldGroup.add(gloveL, gloveR);
+
 /* --------------------------------------------------------------------------
    6. BOWLER RIG
 -------------------------------------------------------------------------- */
-const bowler = buildHumanoid({jersey:0xd94f2a, trouser:0xf5f5f5, name:'bowler'});
+const bowler = buildHumanoid({jersey:0xd94f2a, trouser:0xf5f5f5, name:'bowler', jerseyNumber:51});
 const BOWL_RUNUP_START = new THREE.Vector3(0, 0, PITCH_Z_BOWLER - 7);
 const BOWL_RELEASE_POS = new THREE.Vector3(0, 0, PITCH_Z_BOWLER + 0.6);
 bowler.position.copy(BOWL_RUNUP_START);
@@ -480,15 +625,15 @@ fieldGroup.add(bowler);
    7. FIELDERS (>=4)
 -------------------------------------------------------------------------- */
 const fielderSpots = [
-  {x:-22,z:22, name:'cover'},
-  {x:24,z:18, name:'mid-wicket'},
-  {x:-30,z:-2, name:'slip'},
-  {x:30,z:-6, name:'point'},
-  {x:0,z:44, name:'long-on'},
-  {x:-8,z:-25, name:'wicketkeeper'},
+  {x:-22,z:22, name:'cover', num:7},
+  {x:24,z:18, name:'mid-wicket', num:23},
+  {x:-30,z:-2, name:'slip', num:9},
+  {x:30,z:-6, name:'point', num:44},
+  {x:0,z:44, name:'long-on', num:12},
+  {x:-8,z:-25, name:'wicketkeeper', num:3},
 ];
 const fielders = fielderSpots.map(sp=>{
-  const f = buildHumanoid({jersey:0x1e7d46, trouser:0xf5f5f5, name:'fielder-'+sp.name});
+  const f = buildHumanoid({jersey:0x1e7d46, trouser:0xf5f5f5, name:'fielder-'+sp.name, jerseyNumber:sp.num});
   f.position.set(sp.x,0,sp.z);
   f.lookAt(0,0.9,PITCH_Z_BATSMAN*0.3);
   fieldGroup.add(f);
@@ -510,42 +655,73 @@ const BALL = {
   pos:new THREE.Vector3(),
   vel:new THREE.Vector3(),
   hasBounced:false,
-  spinKick:0,
   swingForce:0,
+  seamKick:0,
+  bounceH:0,
   active:false,
 };
 const _prevBallPosForCollision = new THREE.Vector3();
 
 /* --------------------------------------------------------------------------
-   9. DELIVERY ENGINE — 6 ball types
+   9. DELIVERY ENGINE — player-directed (pace / line / swing / length)
 -------------------------------------------------------------------------- */
-const DELIVERY_TYPES = [
-  { name:'Fast Outswinger', speed: 27, lengthZ: PITCH_Z_BATSMAN-3.2, launchY: 1.9, swing: -2.6, seamKick: 1.4, bounceH: 0.55 },
-  { name:'Inswinger', speed: 26, lengthZ: PITCH_Z_BATSMAN-3.0, launchY: 1.9, swing: 2.3, seamKick: -1.2, bounceH: 0.5 },
-  { name:'Bouncer', speed: 30, lengthZ: PITCH_Z_BOWLER+3.5, launchY: 2.05, swing: 0.3, seamKick: 0.4, bounceH: 2.6 },
-  { name:'Yorker', speed: 29, lengthZ: PITCH_Z_BATSMAN-0.6, launchY: 1.75, swing: -0.6, seamKick: 0.6, bounceH: 0.22 },
-  { name:'Off-Spin', speed: 17, lengthZ: PITCH_Z_BATSMAN-2.2, launchY: 2.0, swing: 1.1, seamKick: 2.4, bounceH: 0.7 },
-  { name:'Wide Outside', speed: 22, lengthZ: PITCH_Z_BATSMAN-3.0, launchY: 1.85, swing: -3.6, seamKick: -0.6, bounceH: 0.5, wide:true, offsetX: -2.6 },
-];
+const GLOBAL_SPEED_SCALE = 0.82; // overall pace tuned down from raw-realistic for playability
 
-// Overall pace tuned down from raw "physically realistic" speeds, plus a gentle progressive
-// ramp over the first couple of overs, so new players can actually get their timing down
-// before facing full pace. This directly targets "very hard to hit even trying" difficulty.
-const GLOBAL_SPEED_SCALE = 0.82;
+const PACE_TABLE = {
+  fast:   { speed:27, swingMul:1.0, name:'Fast' },
+  medium: { speed:22, swingMul:1.3, name:'Medium Pace' },
+  spin:   { speed:15, swingMul:0.4, name:'Spin' },
+};
 
-function startDelivery(){
-  STATE.deliveryType = DELIVERY_TYPES[Math.floor(Math.random()*DELIVERY_TYPES.length)];
+function lineLabelFor(v){
+  if(v<-0.9) return 'Leg Stump';
+  if(v<-0.2) return 'Leg Side';
+  if(v<0.2) return 'Middle Stump';
+  if(v<1.0) return 'Off Stump';
+  return 'Wide Outside Off';
+}
+function lengthLabelFor(zone){
+  if(zone<0.12) return 'Yorker';
+  if(zone<0.34) return 'Full';
+  if(zone<0.58) return 'Good Length';
+  if(zone<0.8) return 'Short';
+  return 'Bouncer';
+}
+
+// sel = { pace:'fast'|'medium'|'spin', line:-1.6..1.8, swing:-1..1, lengthZone:0..1 }
+function buildDeliveryFromSelection(sel){
+  const pace = PACE_TABLE[sel.pace];
+  const zone = THREE.MathUtils.clamp(sel.lengthZone, 0, 1);
+  const isYorkerSkid = zone < 0.12;
+  const lengthZ = THREE.MathUtils.lerp(PITCH_Z_BATSMAN-0.6, PITCH_Z_BOWLER+3.5, zone);
+  const bounceH = THREE.MathUtils.lerp(0.22, 2.6, zone);
+  const swing = THREE.MathUtils.clamp(sel.swing * 3.2 * pace.swingMul, -4.2, 4.2);
+  const seamMul = sel.pace==='spin' ? 2.6 : 1.1;
+  const seamKick = THREE.MathUtils.clamp(sel.swing*seamMul + (Math.random()-0.5)*0.8, -3.2, 3.2);
+
+  return {
+    name: pace.name+' — '+lengthLabelFor(zone)+' ('+lineLabelFor(sel.line)+')',
+    speed: pace.speed,
+    lengthZ, launchY: isYorkerSkid?1.75:1.95,
+    swing, seamKick, bounceH, isYorkerSkid,
+    offsetX: sel.line*0.55,
+  };
+}
+
+function startDelivery(deliveryType){
+  STATE.deliveryType = deliveryType;
   STATE.bowlerPhase='runup';
   STATE.bowlerT=0;
   STATE.deliveryInFlight=false;
   STATE.ballHitThisDelivery=false;
   STATE.outThisDelivery=false;
   STATE.whooshPlayed=false;
+  STATE.lastBallLabel=null;
   bowler.position.copy(BOWL_RUNUP_START);
   ball.visible=false;
   BALL.active=false;
-  setStatus('Bowler running in — a '+STATE.deliveryType.name+'…');
-  document.getElementById('ballType').textContent='Ball type: '+STATE.deliveryType.name;
+  setStatus('Bowler running in — '+deliveryType.name+'…');
+  document.getElementById('ballType').textContent='Ball type: '+deliveryType.name;
 }
 
 function releaseBall(){
@@ -553,18 +729,19 @@ function releaseBall(){
   const progressiveScale = Math.min(1, 0.72 + STATE.ballsBowled*0.025);
   const speedZ = dt.speed * GLOBAL_SPEED_SCALE * progressiveScale;
 
-  BALL.pos.set(dt.offsetX?dt.offsetX*0.15:0, dt.launchY, BOWL_RELEASE_POS.z);
-  const distance = dt.lengthZ - BALL.pos.z;
+  BALL.pos.set(dt.offsetX*0.3, dt.launchY, BOWL_RELEASE_POS.z);
   const gravity = -14;
   let vy;
-  if(dt.name==='Yorker'){
+  if(dt.isYorkerSkid){
     vy = -1.0;
   } else {
+    const distance = dt.lengthZ - BALL.pos.z;
     const timeToLength = Math.max(0.35, distance/speedZ);
     vy = -(gravity*timeToLength)/2;
   }
-  BALL.vel.set(dt.wide?2.0:0, vy, speedZ);
-  BALL.hasBounced = (dt.name==='Yorker');
+  const lineVX = dt.offsetX * 0.9;
+  BALL.vel.set(lineVX, vy, speedZ);
+  BALL.hasBounced = !!dt.isYorkerSkid;
   BALL.swingForce = dt.swing;
   BALL.seamKick = dt.seamKick;
   BALL.bounceH = dt.bounceH;
@@ -585,6 +762,61 @@ function showCommentary(msg,ms=2200){
   clearTimeout(showCommentary._t);
   showCommentary._t = setTimeout(()=>el.classList.remove('show'), ms);
 }
+
+/* --------------------------------------------------------------------------
+   9b. BOWLER DELIVERY-SETUP PANEL (pace / line / swing / length UI)
+-------------------------------------------------------------------------- */
+let bowlMarkerActive = false;
+let bowlMarkerPos = 0.5;
+let selPace = 'fast';
+
+function bowlMarkerLoop(now){
+  if(!bowlMarkerActive) return;
+  bowlMarkerPos = (Math.sin(now*0.0028)+1)/2;
+  document.getElementById('lengthMarker').style.left = (bowlMarkerPos*96)+'%';
+  requestAnimationFrame(bowlMarkerLoop);
+}
+function showBowlPanel(){
+  STATE.awaitingBowlSelect = true;
+  document.getElementById('bowlPanel').classList.remove('hidden');
+  bowlMarkerActive = true;
+  requestAnimationFrame(bowlMarkerLoop);
+  setStatus('Set your delivery, then tap BOWL.');
+}
+function hideBowlPanel(){
+  document.getElementById('bowlPanel').classList.add('hidden');
+  bowlMarkerActive = false;
+  STATE.awaitingBowlSelect = false;
+}
+
+document.querySelectorAll('#paceBtns button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('#paceBtns button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    selPace = b.dataset.v;
+  };
+});
+const lineSliderEl = document.getElementById('lineSlider');
+const swingSliderEl = document.getElementById('swingSlider');
+const lineLabelEl = document.getElementById('lineLabel');
+const swingLabelEl = document.getElementById('swingLabel');
+lineSliderEl.oninput = ()=>{
+  lineLabelEl.textContent = lineLabelFor(parseInt(lineSliderEl.value,10)/100);
+};
+swingSliderEl.oninput = ()=>{
+  const v = parseInt(swingSliderEl.value,10);
+  swingLabelEl.textContent = v<-40?'Heavy In-Swing': v<-10?'In-Swing': v<10?'Straight': v<40?'Away-Swing':'Heavy Away-Swing';
+};
+document.getElementById('bowlGoBtn').onclick = ()=>{
+  const sel = {
+    pace: selPace,
+    line: parseInt(lineSliderEl.value,10)/100,
+    swing: parseInt(swingSliderEl.value,10)/100,
+    lengthZone: bowlMarkerPos,
+  };
+  hideBowlPanel();
+  startDelivery(buildDeliveryFromSelection(sel));
+};
 
 /* --------------------------------------------------------------------------
    10. BOWLER ANIMATION (1.2s run-up + swing + release)
@@ -680,6 +912,7 @@ function checkStumpCollision(){
 
 function wicketFall(){
   STATE.wickets++;
+  STATE.lastBallLabel='W';
   showCommentary('BOWLED! Timber sent flying! 🏏💥',2600);
   stumpsBat.children.forEach(c=>{ c.rotation.x = (Math.random()-0.5)*1.4; c.rotation.z=(Math.random()-0.5)*1.4;});
   updateScoreboard();
@@ -704,13 +937,7 @@ function updateBatVelocity(now){
 }
 
 /* --------------------------------------------------------------------------
-   13. BAT / BALL COLLISION + SHOT PHYSICS
-   Rewritten as a forgiving SWEPT collision: every frame we test the ball's
-   full travel segment (previous position -> new position) against several
-   sample points running the length of the bat, instead of a single point
-   checked once. This eliminates high-speed tunneling and the "I swung right
-   through it" problem, while still requiring the bat to genuinely be near
-   the ball's line.
+   13. BAT / BALL COLLISION + SHOT PHYSICS  (forgiving swept collision)
 -------------------------------------------------------------------------- */
 function pointToSegmentDistance(p, a, b){
   const ab = new THREE.Vector3().subVectors(b,a);
@@ -722,7 +949,7 @@ function pointToSegmentDistance(p, a, b){
   return p.distanceTo(closest);
 }
 
-const HIT_RADIUS = 0.62; // generous, mass-market forgiving hitbox
+const HIT_RADIUS = 0.62;
 
 function checkBatCollision(){
   if(STATE.ballHitThisDelivery || STATE.outThisDelivery){
@@ -741,7 +968,6 @@ function checkBatCollision(){
     if(d<minDist) minDist = d;
   }
 
-  // Feedback for a real swing that doesn't connect (helps players learn timing)
   if(!STATE.whooshPlayed && batVelocity.length()>4.5 && Math.abs(BALL.pos.z-BAT_BASE.z)<1.3){
     STATE.whooshPlayed = true;
     if(minDist>=HIT_RADIUS) AUDIO.whoosh();
@@ -799,6 +1025,7 @@ function checkDeliveryEnd(){
     if(distFromCenter>64){
       const six = !BALL.hasBounced;
       STATE.runs += six?6:4;
+      STATE.lastBallLabel = six?'6':'4';
       AUDIO.crowdCheer(six);
       showCommentary(six? 'SIX! Into the crowd!! 🎉':'FOUR! Races to the boundary!! 🏃',2600);
       updateScoreboard();
@@ -809,6 +1036,7 @@ function checkDeliveryEnd(){
       const fd = Math.hypot(f.x-BALL.pos.x, f.z-BALL.pos.z);
       if(fd<2.2 && BALL.pos.y<2.3 && BALL.pos.y>0.3 && BALL.vel.y<3){
         STATE.wickets++;
+        STATE.lastBallLabel = 'W';
         showCommentary('CAUGHT by '+f.name+'! Brilliant take!',2600);
         updateScoreboard();
         endDelivery();
@@ -818,12 +1046,14 @@ function checkDeliveryEnd(){
     if(BALL.hasBounced && BALL.vel.length()<1.2 && BALL.pos.z < PITCH_Z_BOWLER-1){
       const runs = distFromCenter>40?3:(distFromCenter>25?2:1);
       STATE.runs += runs;
+      STATE.lastBallLabel = String(runs);
       updateScoreboard();
       showCommentary(runs+' run'+(runs>1?'s':'')+' taken.',1600);
       endDelivery();
     }
   } else {
     if(BALL.pos.z > STUMPS_Z_BAT+2.5 && !STATE.outThisDelivery){
+      STATE.lastBallLabel = STATE.lastBallLabel || '•';
       showCommentary('Beaten! Past the bat.',1800);
       endDelivery();
     }
@@ -834,6 +1064,8 @@ let endDeliveryTimer=null;
 function endDelivery(){
   if(endDeliveryTimer) return;
   STATE.ballsBowled++;
+  STATE.overHistory.push(STATE.lastBallLabel || '•');
+  renderOverHistory();
   updateScoreboard();
   endDeliveryTimer = setTimeout(()=>{
     endDeliveryTimer=null;
@@ -843,7 +1075,7 @@ function endDelivery(){
     STATE.replay.active=false;
     switchCam(STATE.camMode==='replay'?'rear':STATE.camMode);
     stumpsBat.children.forEach(c=>{c.rotation.set(0,0,0);});
-    setTimeout(startDelivery, 1400);
+    setTimeout(showBowlPanel, 1000);
   }, 1600);
 }
 
@@ -852,6 +1084,13 @@ function updateScoreboard(){
   document.getElementById('scoreline').innerHTML =
     STATE.runs+'/'+STATE.wickets+' <span class="overs">('+overs+' ov)</span>';
 }
+function renderOverHistory(){
+  const el = document.getElementById('overHistory');
+  el.innerHTML = STATE.overHistory.slice(-6).map(l=>{
+    const cls = l==='W' ? 'wicket' : (l==='4'||l==='6') ? 'boundary' : '';
+    return '<span class="ballPip '+cls+'">'+l+'</span>';
+  }).join('');
+}
 
 /* --------------------------------------------------------------------------
    15. CAMERA VIEW SYSTEM
@@ -859,15 +1098,20 @@ function updateScoreboard(){
 function switchCam(mode){
   STATE.camMode = mode;
   document.getElementById('camRear').classList.toggle('active', mode==='rear');
+  document.getElementById('camClose').classList.toggle('active', mode==='close');
   document.getElementById('camSide').classList.toggle('active', mode==='side');
 }
 document.getElementById('camRear').onclick=()=>switchCam('rear');
+document.getElementById('camClose').onclick=()=>switchCam('close');
 document.getElementById('camSide').onclick=()=>switchCam('side');
 
 function updateCamera(dt){
   if(STATE.camMode==='rear'){
     camera.position.lerp(CAM_REAR, 0.08);
     camera.lookAt(0,1.3,PITCH_Z_BATSMAN-2);
+  } else if(STATE.camMode==='close'){
+    camera.position.lerp(CAM_CLOSE, 0.08);
+    camera.lookAt(0,1.2,PITCH_Z_BATSMAN-1);
   } else if(STATE.camMode==='side'){
     camera.position.lerp(CAM_SIDE, 0.08);
     camera.lookAt(0,0.8,(PITCH_Z_BATSMAN+PITCH_Z_BOWLER)/2);
@@ -880,38 +1124,45 @@ function updateCamera(dt){
 }
 
 /* --------------------------------------------------------------------------
-   16. ARM IK + COSMETIC BODY MOVEMENT
-   Runs every rendered frame (independent of how often MediaPipe delivers a
-   new pose) so the batsman's arms continuously reach toward wherever the
-   bat currently is, and his torso/stance shifts with the swing. This is
-   what makes the character visibly move instead of standing frozen.
+   16. BATSMAN ARM PLACEMENT + COSMETIC BODY MOVEMENT
 -------------------------------------------------------------------------- */
 const UP_ARM_LEN=0.42, FORE_ARM_LEN=0.38;
-const REACH_MAX=(UP_ARM_LEN+FORE_ARM_LEN)*0.98;
-const DEFAULT_ARM_DIR=new THREE.Vector3(0,-1,0);
-const _ikShoulderPos = new THREE.Vector3();
-const _ikInvQuat = new THREE.Quaternion();
-const _ikDesiredQuat = new THREE.Quaternion();
+const POLE_WORLD = new THREE.Vector3(0,0,1); // fixed world reference — never flips
+const UNIT_Y = new THREE.Vector3(0,1,0);
+const _sA = new THREE.Vector3();
+const _sMid = new THREE.Vector3();
+const _sDir = new THREE.Vector3();
+const _sPerp = new THREE.Vector3();
 
-function aimArm(shoulder, elbow, gripLocalOffset, lerpAmt){
-  const gripWorld = batGroup.localToWorld(gripLocalOffset.clone());
-  const shoulderWorld = shoulder.getWorldPosition(_ikShoulderPos);
-  const dir = new THREE.Vector3().subVectors(gripWorld, shoulderWorld);
-  let dist = Math.min(dir.length(), REACH_MAX);
-  dir.normalize();
+function placeSegment(mesh, A, B){
+  const dist = Math.max(A.distanceTo(B), 0.001);
+  mesh.position.set((A.x+B.x)*0.5, (A.y+B.y)*0.5, (A.z+B.z)*0.5);
+  mesh.scale.y = dist;
+  _sDir.subVectors(B,A).normalize();
+  mesh.quaternion.setFromUnitVectors(UNIT_Y, _sDir);
+}
 
-  batsman.getWorldQuaternion(_ikInvQuat).invert();
-  const localDir = dir.applyQuaternion(_ikInvQuat);
+function placeArm(shoulderAnchor, gripLocal, upperMesh, foreMesh, gloveMesh){
+  const shoulderWorld = shoulderAnchor.getWorldPosition(_sA);
+  const gripWorld = batGroup.localToWorld(gripLocal.clone());
 
-  _ikDesiredQuat.setFromUnitVectors(DEFAULT_ARM_DIR, localDir);
-  shoulder.quaternion.slerp(_ikDesiredQuat, lerpAmt);
+  const dist = shoulderWorld.distanceTo(gripWorld);
 
-  const L1=UP_ARM_LEN, L2=FORE_ARM_LEN;
-  const clampedDist = THREE.MathUtils.clamp(dist, Math.abs(L1-L2)+0.02, L1+L2-0.02);
-  const cosTheta = THREE.MathUtils.clamp((L1*L1+L2*L2-clampedDist*clampedDist)/(2*L1*L2), -1, 1);
-  const theta = Math.acos(cosTheta);
-  const bend = Math.PI - theta;
-  elbow.rotation.x = THREE.MathUtils.lerp(elbow.rotation.x, bend, lerpAmt);
+  _sDir.subVectors(gripWorld, shoulderWorld).normalize();
+  _sPerp.crossVectors(_sDir, POLE_WORLD);
+  if(_sPerp.lengthSq() < 1e-5) _sPerp.crossVectors(_sDir, new THREE.Vector3(1,0,0));
+  _sPerp.normalize();
+
+  const bendAmount = THREE.MathUtils.clamp((UP_ARM_LEN+FORE_ARM_LEN - dist) * 0.45, 0, 0.22);
+  _sMid.set(
+    (shoulderWorld.x+gripWorld.x)*0.5 + _sPerp.x*bendAmount,
+    (shoulderWorld.y+gripWorld.y)*0.5 + _sPerp.y*bendAmount - bendAmount*0.3,
+    (shoulderWorld.z+gripWorld.z)*0.5 + _sPerp.z*bendAmount
+  );
+
+  placeSegment(upperMesh, shoulderWorld.clone(), _sMid.clone());
+  placeSegment(foreMesh, _sMid.clone(), gripWorld.clone());
+  gloveMesh.position.copy(gripWorld);
 }
 
 let _torsoTwist = 0;
@@ -948,13 +1199,13 @@ function updateBatGlow(){
 const videoEl = document.getElementById('video');
 let poseReady = false;
 let smoothedX=0, smoothedY=0, smoothedZ=0, smoothedAngle=0;
-const SCALE_X = 3.4;       // world-units of horizontal bat travel
-const SCALE_Y = 2.0;       // world-units of vertical bat travel
-const SCALE_Z = 1.6;       // world-units of forward reach (push shots)
-const SMOOTH_POS = 0.5;    // lerp factor for X/Y jitter reduction
-const SMOOTH_Z = 0.22;     // depth is noisier, smooth harder
+const SCALE_X = 3.4;
+const SCALE_Y = 2.0;
+const SCALE_Z = 1.6;
+const SMOOTH_POS = 0.5;
+const SMOOTH_Z = 0.22;
 const SMOOTH_ANGLE = 0.5;
-const CALIBRATION_OFFSET = 0; // tune if the bat's rest pose needs a fixed rotational bias
+const CALIBRATION_OFFSET = 0;
 
 function onPoseResults(results){
   if(!results.poseLandmarks){ poseReady=false; return; }
@@ -969,13 +1220,12 @@ function onPoseResults(results){
   const midY = (lw.y+rw.y)/2;
   const midZ = (lw.z+rw.z)/2;
 
-  // --- CRITICAL SPATIAL INVERSION FIX ---
   // MediaPipe: x=0 camera-left .. x=1 camera-right. With the preview mirrored via CSS
   // (scaleX(-1)), the user's physical LEFT motion increases landmark.x.
   // 3D_X = -(landmark.x - 0.5) * Scale  =>  physical-left => negative X => screen-left.
   const targetX = -(midX-0.5) * SCALE_X;
   const targetY = -(midY-0.5) * SCALE_Y;
-  const targetZ = -midZ * SCALE_Z; // extending arms forward pushes the bat toward the bowler
+  const targetZ = -midZ * SCALE_Z;
 
   smoothedX += (targetX-smoothedX)*SMOOTH_POS;
   smoothedY += (targetY-smoothedY)*SMOOTH_POS;
@@ -984,7 +1234,6 @@ function onPoseResults(results){
   smoothedY = THREE.MathUtils.clamp(smoothedY, -1.3, 1.5);
   smoothedZ = THREE.MathUtils.clamp(smoothedZ, -1.0, 1.1);
 
-  // --- BAT ORIENTATION: 2D forearm angle, inverted so crossing hands left => blade points left ---
   const angle = Math.atan2(lw.y-rw.y, lw.x-rw.x);
   let targetAngle = -angle + CALIBRATION_OFFSET;
   let diff = targetAngle - smoothedAngle;
@@ -998,9 +1247,9 @@ function onPoseResults(results){
 
 let mpPose=null;
 function initPose(){
-  mpPose = new Pose({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
+  mpPose = new Pose({locateFile:(f)=>https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}});
   mpPose.setOptions({
-    modelComplexity:0,          // Lite model — cuts inference latency substantially, critical for responsive swings
+    modelComplexity:0,
     smoothLandmarks:true,
     minDetectionConfidence:0.5,
     minTrackingConfidence:0.5,
@@ -1008,11 +1257,6 @@ function initPose(){
   mpPose.onResults(onPoseResults);
 }
 
-// Frames are pumped manually via requestAnimationFrame instead of the MediaPipe Camera
-// helper. The helper requests its OWN getUserMedia stream, which — on top of the stream we
-// already request for permission handling — meant two simultaneous camera captures running
-// at once, wasting bandwidth/CPU and adding latency. Driving mpPose.send() ourselves also
-// naturally paces requests to the model's real inference speed instead of queuing frames up.
 let poseLoopActive = false;
 async function poseFrameLoop(){
   if(!poseLoopActive) return;
@@ -1040,20 +1284,21 @@ document.getElementById('bigStart').onclick = async ()=>{
     startPoseLoop();
     document.getElementById('startOverlay').classList.add('hidden');
     STATE.running = true;
-    setStatus('Get ready — first ball incoming!');
-    setTimeout(startDelivery, 1200);
+    setStatus('Get ready — set your first delivery!');
+    setTimeout(showBowlPanel, 1000);
   }catch(err){
     msg.textContent = 'Camera permission denied or unavailable: '+err.message;
   }
 };
 
 document.getElementById('restartBtn').onclick = ()=>{
-  STATE.runs=0; STATE.wickets=0; STATE.ballsBowled=0;
+  STATE.runs=0; STATE.wickets=0; STATE.ballsBowled=0; STATE.overHistory=[];
   STATE.bowlerPhase='idle'; STATE.ballHitThisDelivery=false; STATE.outThisDelivery=false;
   ball.visible=false; BALL.active=false;
-  updateScoreboard();
+  updateScoreboard(); renderOverHistory();
   clearTimeout(endDeliveryTimer); endDeliveryTimer=null;
-  setTimeout(startDelivery, 400);
+  hideBowlPanel();
+  setTimeout(showBowlPanel, 400);
 };
 
 /* --------------------------------------------------------------------------
@@ -1066,23 +1311,22 @@ function animate(now){
   lastT = now;
 
   if(STATE.running){
-    // Ensure every world matrix reflects the latest pose-driven transforms before any
-    // world-space math (collision, IK, velocity) runs this frame.
     fieldGroup.updateMatrixWorld(true);
 
     updateBatVelocity(now);
     updateBowler(dt);
     updateBallPhysics(dt);
-    aimArm(batsman.userData.shoulderR, batsman.userData.elbowR, GRIP_BOTTOM_LOCAL, 0.35);
-    aimArm(batsman.userData.shoulderL, batsman.userData.elbowL, GRIP_TOP_LOCAL, 0.35);
     updateBodyMovement(0.12);
+    fieldGroup.updateMatrixWorld(true);
+    placeArm(shoulderAnchorR, GRIP_BOTTOM_LOCAL, upperArmR, foreArmR, gloveR);
+    placeArm(shoulderAnchorL, GRIP_TOP_LOCAL, upperArmL, foreArmL, gloveL);
     updateBatGlow();
     updateCamera(dt);
 
     if(!poseReady){
       setStatus('Show your upper body to the webcam to control the bat.');
-    } else if(STATE.bowlerPhase==='idle' && !BALL.active){
-      // waiting between deliveries
+    } else if(STATE.awaitingBowlSelect){
+      // status set by showBowlPanel()
     } else if(STATE.bowlerPhase==='runup'){
       setStatus('Bowler running in…');
     } else if(STATE.deliveryInFlight && !STATE.ballHitThisDelivery){
@@ -1100,6 +1344,7 @@ function animate(now){
 }
 requestAnimationFrame(animate);
 updateScoreboard();
+renderOverHistory();
 </script>
 </body>
 </html>
